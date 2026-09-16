@@ -11,6 +11,7 @@ function App() {
   const [email, setEmail] = useState<Email | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [summary, setSummary] = useState("");
 
   const getEmail = async () => {
     setLoading(true);
@@ -50,6 +51,56 @@ function App() {
       console.error(error);
       setError("An error occurred while extracting the email.");
       setLoading(false);
+    }
+  };
+
+  const summarizeEmail = async () => {
+    if (!email) return;
+
+    setLoading(true);
+    setError("");
+    setSummary("");
+
+    try {
+      const response = await fetch(
+        "http://localhost:5000/api/summarize",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(email),
+        }
+      );
+      
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to summarize email");
+      }
+
+      setSummary(data.summary);
+
+    } catch (error) {
+      console.error(error);
+      setError("Could not summarize the email.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const testBackend = async () => {
+    try {
+      const response = await fetch("http://localhost:5000");
+
+      const data = await response.json();
+
+      console.log("Backend response:", data);
+
+      alert(data.message);
+    } catch (error) {
+      console.error("Backend connection failed:", error);
+      alert("Backend connection failed");
     }
   };
   
@@ -93,7 +144,14 @@ function App() {
         </div>
       </div>
       )}
-      
+
+      {summary && (
+        <div className="summary-card">
+          <h2>Summary</h2>
+          <p>{summary}</p>
+        </div>
+      )}
+
       {error && (
         <div className="error">
           {error}
@@ -101,7 +159,13 @@ function App() {
       )}
     
       <button className="summarize-button" onClick={getEmail} disabled={loading}>
+        {loading ? "Reading..." : "Get Email"}
+      </button>
+      <button className="summarize-button" onClick={summarizeEmail} disabled={loading}>
         {loading ? "Loading..." : "Summarize Email"}
+      </button>
+      <button onClick={testBackend}>
+        Test Backend
       </button>
       <div className="hint">
         Open an email in Gmail and click this button.
