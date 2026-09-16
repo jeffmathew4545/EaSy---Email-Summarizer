@@ -1,0 +1,22 @@
+{
+    "manifest_version": 3,
+    "name": "EaSy - Email Summarizer",
+    "version": "1.0.0",
+    "description": "A Chrome extension that summarizes emails for quick reading.",
+    "permissions": [
+        "activeTab",
+        "scripting"
+    ],
+    "host_permissions": [
+        "https://mail.google.com/*"
+    ],
+    "content_scripts": [
+        {
+            "matches": ["https://mail.google.com/*"],
+            "js": ["content.js"]
+        }
+    ],
+    "action": {
+        "default_title": "EaSy - Email Summarizer"
+    }
+}
