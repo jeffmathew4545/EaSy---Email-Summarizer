@@ -17,6 +17,7 @@
         }
     ],
     "action": {
+        "default_popup": "index.html",
         "default_title": "EaSy - Email Summarizer"
     }
 }

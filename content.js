@@ -40,4 +40,16 @@ function waitForEmail() {
     //If checkEmail not cleared, then wait for 500 milliseconds again.
 }
 
-waitForEmail();
+chrome.runtime.onMessage.addListener(
+    (message, sender, sendResponse) => {
+        if (message.action === "extractEmail") {
+            const email = extractEmail();
+            console.log("Extracted Email:", email);
+            sendResponse({
+                success: true,
+                email: email
+            });
+        }
+        return true;
+    }
+);
