@@ -13,9 +13,10 @@ function App() {
   const [error, setError] = useState("");
   const [summary, setSummary] = useState("");
 
-  const getEmail = async () => {
+  const summarizeEmail = async () => {
     setLoading(true);
     setError("");
+    setSummary("");
 
     try {
       const tabs = await chrome.tabs.query({
@@ -26,84 +27,65 @@ function App() {
       const tab = tabs[0];
 
       if (!tab.id) {
-        throw new Error("No active tab found.");
+        throw new Error("No Active tab found.");
       }
 
       chrome.tabs.sendMessage(
         tab.id,
         {action: "extractEmail"},
-        (response) => {
+        async (response) => {
           if (chrome.runtime.lastError) {
             setError("Could not connect to Gmail.");
             setLoading(false);
             return;
           }
+
           if (!response || !response.success) {
-            setError("Failed to extract email.");
+            setError("Failed to extract email.")
             setLoading(false);
             return;
           }
-          setEmail(response.email);
-          setLoading(false);
+
+          const extractedEmail: Email = response.email;
+
+          setEmail(extractedEmail);
+
+          try {
+            const apiResponse = await fetch(
+              "http://localhost:5000/api/summarize",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(extractedEmail),
+              }
+            );
+
+            const data = await apiResponse.json();
+
+            if (!apiResponse.ok) {
+              throw new Error(data.message || "Failed to summarize email");
+            }
+
+            setSummary(data.summary);
+
+          } catch (error) {
+            console.error(error);
+            setError("Could not summarize the email.");
+          } finally {
+            setLoading(false);
+          }
         }
       );
+
     } catch (error) {
       console.error(error);
-      setError("An error occurred while extracting the email.");
+      setError("An error occurred while processing the email.");
       setLoading(false);
     }
   };
 
-  const summarizeEmail = async () => {
-    if (!email) return;
-
-    setLoading(true);
-    setError("");
-    setSummary("");
-
-    try {
-      const response = await fetch(
-        "http://localhost:5000/api/summarize",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(email),
-        }
-      );
-      
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to summarize email");
-      }
-
-      setSummary(data.summary);
-
-    } catch (error) {
-      console.error(error);
-      setError("Could not summarize the email.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const testBackend = async () => {
-    try {
-      const response = await fetch("http://localhost:5000");
-
-      const data = await response.json();
-
-      console.log("Backend response:", data);
-
-      alert(data.message);
-    } catch (error) {
-      console.error("Backend connection failed:", error);
-      alert("Backend connection failed");
-    }
-  };
-  
   return (
     <div className="container">
       <div className="header">
@@ -123,7 +105,7 @@ function App() {
         </div>
       )}
 
-      {email && (
+      {email && summary &&(
         <div className="email-card">
         <div className="email-header">
           <div className="avatar">
@@ -139,17 +121,10 @@ function App() {
         <div className="subject">
           {email.subject || "No Subject"}
         </div>
-        <div className="body-preview">
-          {email.body || "No body content"}
+        <div className="summary-card">
+          {summary || "No Summary"}
         </div>
       </div>
-      )}
-
-      {summary && (
-        <div className="summary-card">
-          <h2>Summary</h2>
-          <p>{summary}</p>
-        </div>
       )}
 
       {error && (
@@ -158,14 +133,8 @@ function App() {
         </div>
       )}
     
-      <button className="summarize-button" onClick={getEmail} disabled={loading}>
-        {loading ? "Reading..." : "Get Email"}
-      </button>
       <button className="summarize-button" onClick={summarizeEmail} disabled={loading}>
         {loading ? "Loading..." : "Summarize Email"}
-      </button>
-      <button onClick={testBackend}>
-        Test Backend
       </button>
       <div className="hint">
         Open an email in Gmail and click this button.
